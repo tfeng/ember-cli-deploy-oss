@@ -1,0 +1,12 @@
+/.idea
+/.sass-cache
+/bower_components
+/connect.lock
+/coverage/*
+/dist
+/libpeerconnection.log
+/node_modules
+/tmp
+nohup.out
+npm-debug.log
+testem.log
