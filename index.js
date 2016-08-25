@@ -1,10 +1,10 @@
 /* jshint node: true */
 'use strict';
 
-var Promise = require('ember-cli/lib/ext/promise');
-var minimatch = require('minimatch');
-var BasePlugin = require('ember-cli-deploy-plugin');
-var Alioss = require('./lib/oss');
+var BasePlugin = require('ember-cli-deploy-plugin'),
+    OSS = require('./lib/oss'),
+    Promise = require('ember-cli/lib/ext/promise'),
+    minimatch = require('minimatch');
 
 module.exports = {
   name: 'ember-cli-deploy-oss',
@@ -32,40 +32,37 @@ module.exports = {
         uploadClient: function(context) {
           return context.uploadClient; // if you want to provide your own upload client to be used instead of one from this addon
         },
-        aliossClient: function(context) {
-          return context.aliossClient; // if you want to provide your own Aliyun OSS client to be used instead of one from aliyun-sdk
+        ossClient: function(context) {
+          return context.ossClient; // if you want to provide your own Aliyun OSS client to be used instead of one from aliyun-sdk
         }
       },
       requiredConfig: ['accessKeyId', 'secretAccessKey', 'bucket', 'region'],
 
       upload: function(context) {
-        var self          = this;
-        var filePattern   = this.readConfig('filePattern');
-        var distDir       = this.readConfig('distDir');
-        var distFiles     = this.readConfig('distFiles');
-        var gzippedFiles  = this.readConfig('gzippedFiles');
-        var bucket        = this.readConfig('bucket');
-        var acl           = this.readConfig('acl');
-        var prefix        = this.readConfig('prefix');
-        var manifestPath  = this.readConfig('manifestPath');
+        var self = this,
+            filePattern = this.readConfig('filePattern'),
+            distDir = this.readConfig('distDir'),
+            distFiles = this.readConfig('distFiles'),
+            gzippedFiles = this.readConfig('gzippedFiles'),
+            bucket = this.readConfig('bucket'),
+            acl = this.readConfig('acl'),
+            prefix = this.readConfig('prefix'),
+            manifestPath = this.readConfig('manifestPath'),
+            filesToUpload = distFiles.filter(minimatch.filter(filePattern, { matchBase: true })),
+            oss = this.readConfig('uploadClient') || new OSS({ plugin: this }),
+            options = {
+              cwd: distDir,
+              filePaths: filesToUpload,
+              gzippedFilePaths: gzippedFiles,
+              prefix: prefix,
+              bucket: bucket,
+              acl: acl,
+              manifestPath: manifestPath
+            };
 
-        var filesToUpload = distFiles.filter(minimatch.filter(filePattern, { matchBase: true }));
+        this.log('preparing to upload to OSS bucket `' + bucket + '`', { verbose: true });
 
-        var alioss = this.readConfig('uploadClient') || new Alioss({ plugin: this });
-
-        var options = {
-          cwd: distDir,
-          filePaths: filesToUpload,
-          gzippedFilePaths: gzippedFiles,
-          prefix: prefix,
-          bucket: bucket,
-          acl: acl,
-          manifestPath: manifestPath
-        };
-
-        this.log('preparing to upload to alioss bucket `' + bucket + '`', { verbose: true });
-
-        return alioss.upload(options)
+        return oss.upload(options)
           .then(function(filesUploaded){
             self.log('uploaded ' + filesUploaded.length + ' files ok', { verbose: true });
             return { filesUploaded: filesUploaded };
